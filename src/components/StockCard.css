@@ -1,0 +1,112 @@
+.stock-card {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  min-width: 280px;
+  animation: slideIn 0.5s ease-out;
+}
+
+.stock-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stock-header {
+  margin-bottom: 16px;
+}
+
+.stock-symbol {
+  font-size: 24px;
+  font-weight: 700;
+  color: #60a5fa;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+
+.stock-name {
+  font-size: 14px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.stock-price {
+  font-size: 36px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 16px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.stock-change {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.stock-change.positive {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.1);
+}
+
+.stock-change.negative {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.arrow {
+  font-size: 14px;
+}
+
+.change-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.change-percent {
+  opacity: 0.9;
+}
+
+.stock-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.detail-label {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.detail-value {
+  color: #e2e8f0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
