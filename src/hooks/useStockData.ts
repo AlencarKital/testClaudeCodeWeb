@@ -5,6 +5,30 @@ import { formatMarketCap } from '../data/stocks';
 // Store historical data (max 1 year worth of 3-second updates)
 const MAX_HISTORY_POINTS = 10512000; // ~1 year in 3-second intervals
 
+// Generate historical price data for a given time period
+const generateHistoricalData = (basePrice: number, periodMinutes: number): { timestamp: number; price: number }[] => {
+  const now = Date.now();
+  const intervalMs = 3000; // 3 seconds between data points
+  const totalPoints = Math.floor((periodMinutes * 60 * 1000) / intervalMs);
+  const history: { timestamp: number; price: number }[] = [];
+
+  // Start from the oldest point and work forward
+  let currentPrice = basePrice * (0.85 + Math.random() * 0.3); // Start within 15% of base price
+
+  for (let i = 0; i < totalPoints; i++) {
+    const timestamp = now - (totalPoints - i) * intervalMs;
+
+    // Simulate realistic price movements with trend and volatility
+    const trendTowardBase = (basePrice - currentPrice) * 0.0001; // Slight pull toward base price
+    const randomWalk = (Math.random() - 0.5) * basePrice * 0.005; // Random movement
+    currentPrice = Math.max(0.01, currentPrice + trendTowardBase + randomWalk);
+
+    history.push({ timestamp, price: currentPrice });
+  }
+
+  return history;
+};
+
 export const useStockData = (availableStocks: AvailableStock[], selectedSymbols: string[]) => {
   const [stocks, setStocks] = useState<Stock[]>([]);
 
@@ -19,6 +43,12 @@ export const useStockData = (availableStocks: AvailableStock[], selectedSymbols:
       const currentPrice = stockInfo.initialPrice + randomChange;
       const currentTime = Date.now();
 
+      // Generate 1 year of historical data
+      const historicalData = generateHistoricalData(stockInfo.initialPrice, 525600); // 1 year in minutes
+
+      // Add current price point
+      historicalData.push({ timestamp: currentTime, price: currentPrice });
+
       return {
         symbol: stockInfo.symbol,
         name: stockInfo.name,
@@ -27,7 +57,7 @@ export const useStockData = (availableStocks: AvailableStock[], selectedSymbols:
         changePercent: changePercent,
         volume: Math.floor(Math.random() * 100000000),
         marketCap: formatMarketCap(stockInfo.initialPrice),
-        priceHistory: [{ timestamp: currentTime, price: currentPrice }],
+        priceHistory: historicalData,
       };
     }).filter(Boolean) as Stock[];
 
