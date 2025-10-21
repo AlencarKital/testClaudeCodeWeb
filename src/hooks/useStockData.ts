@@ -23,7 +23,10 @@ export const useStockData = (availableStocks: AvailableStock[], selectedSymbols:
     // Função para buscar cotação atual de um símbolo
     const fetchStockQuote = async (symbol: string, stockInfo: AvailableStock): Promise<Partial<Stock> | null> => {
       try {
+        console.log(`[useStockData] Iniciando busca de cotação para ${symbol}...`);
         const quote = await fetchQuote(symbol);
+
+        console.log(`[useStockData] Cotação de ${symbol} obtida: $${quote.price} (${quote.changePercent > 0 ? '+' : ''}${quote.changePercent.toFixed(2)}%)`);
 
         return {
           symbol: stockInfo.symbol,
@@ -35,7 +38,7 @@ export const useStockData = (availableStocks: AvailableStock[], selectedSymbols:
           marketCap: formatMarketCap(quote.price),
         };
       } catch (err) {
-        console.error(`Erro ao buscar cotação de ${symbol}:`, err);
+        console.error(`[useStockData] ❌ Erro ao buscar cotação de ${symbol}:`, err);
         return null;
       }
     };
@@ -47,10 +50,13 @@ export const useStockData = (availableStocks: AvailableStock[], selectedSymbols:
       period: TimePeriod
     ): Promise<{ timestamp: number; price: number }[]> => {
       try {
+        console.log(`[useStockData] Buscando histórico ${period} para ${symbol}...`);
         // Tenta buscar do cache primeiro, senão busca do Yahoo Finance
-        return await getOrFetchData(symbol, period, () => fetchYahooHistoricalData(symbol, period));
+        const data = await getOrFetchData(symbol, period, () => fetchYahooHistoricalData(symbol, period));
+        console.log(`[useStockData] Histórico ${period} de ${symbol}: ${data.length} pontos obtidos`);
+        return data;
       } catch (err) {
-        console.error(`Erro ao buscar histórico ${period} de ${symbol}:`, err);
+        console.error(`[useStockData] ❌ Erro ao buscar histórico ${period} de ${symbol}:`, err);
         return [];
       }
     };
@@ -122,6 +128,7 @@ export const useStockData = (availableStocks: AvailableStock[], selectedSymbols:
 
     // Função para inicializar dados
     const initializeStocks = async () => {
+      console.log(`[useStockData] 🚀 Inicializando dados para ${selectedSymbols.length} ações: ${selectedSymbols.join(', ')}`);
       setLoading(true);
       setError(null);
 
@@ -130,8 +137,10 @@ export const useStockData = (availableStocks: AvailableStock[], selectedSymbols:
         const results = await Promise.all(stockPromises);
         const validStocks = results.filter(Boolean) as Stock[];
 
+        console.log(`[useStockData] ✅ ${validStocks.length} de ${selectedSymbols.length} ações carregadas com sucesso`);
+
         if (validStocks.length === 0) {
-          throw new Error('Não foi possível carregar dados de nenhuma ação');
+          throw new Error('Não foi possível carregar dados de nenhuma ação. Verifique os logs acima para detalhes.');
         }
 
         if (isMounted) {
@@ -139,7 +148,7 @@ export const useStockData = (availableStocks: AvailableStock[], selectedSymbols:
           setLoading(false);
         }
       } catch (err) {
-        console.error('Erro ao inicializar ações:', err);
+        console.error('[useStockData] ❌ Erro ao inicializar ações:', err);
         if (isMounted) {
           setError(err instanceof Error ? err.message : 'Erro desconhecido ao carregar dados');
           setLoading(false);
