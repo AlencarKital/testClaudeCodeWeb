@@ -1,3 +1,8 @@
+export interface PricePoint {
+  timestamp: number;
+  price: number;
+}
+
 export interface Stock {
   symbol: string;
   name: string;
@@ -6,6 +11,7 @@ export interface Stock {
   changePercent: number;
   volume: number;
   marketCap: string;
+  priceHistory: PricePoint[];
 }
 
 export interface AvailableStock {
