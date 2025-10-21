@@ -1,13 +1,19 @@
 import { useState, useEffect } from 'react';
 import type { Stock, AvailableStock, TimePeriod } from '../types/stock';
 import { formatMarketCap } from '../data/stocks';
-import { fetchQuote, fetchHistoricalData } from '../services/alphaVantage';
+// Alpha Vantage: apenas para cotações em tempo real
+import { fetchQuote } from '../services/alphaVantage';
+// Yahoo Finance: dados históricos sem limites rígidos
+import { fetchHistoricalData as fetchYahooHistoricalData } from '../services/yahooFinance';
+// Supabase: cache dos dados históricos
+import { getOrFetchData } from '../services/supabaseCache';
 
 // Update interval for real-time quotes (30 seconds to respect API limits)
 const QUOTE_UPDATE_INTERVAL = 30000; // 30 seconds
 
-// Historical data refresh interval (5 minutes)
-const HISTORICAL_REFRESH_INTERVAL = 300000; // 5 minutes
+// Historical data refresh - não precisamos mais atualizar com tanta frequência (cache no Supabase)
+// Apenas se o usuário recarregar a página ou se o cache expirar
+const HISTORICAL_REFRESH_INTERVAL = 0; // Desabilitado - usa cache do Supabase
 
 export const useStockData = (availableStocks: AvailableStock[], selectedSymbols: string[]) => {
   const [stocks, setStocks] = useState<Stock[]>([]);
@@ -16,7 +22,6 @@ export const useStockData = (availableStocks: AvailableStock[], selectedSymbols:
 
   useEffect(() => {
     let quoteInterval: ReturnType<typeof setInterval>;
-    let historicalInterval: ReturnType<typeof setInterval>;
     let isMounted = true;
 
     // Função para buscar cotação atual de um símbolo
@@ -40,12 +45,14 @@ export const useStockData = (availableStocks: AvailableStock[], selectedSymbols:
     };
 
     // Função para buscar histórico de um símbolo para um período
+    // Usa Yahoo Finance com cache do Supabase
     const fetchStockHistory = async (
       symbol: string,
       period: TimePeriod
     ): Promise<{ timestamp: number; price: number }[]> => {
       try {
-        return await fetchHistoricalData(symbol, period);
+        // Tenta buscar do cache primeiro, senão busca do Yahoo Finance
+        return await getOrFetchData(symbol, period, () => fetchYahooHistoricalData(symbol, period));
       } catch (err) {
         console.error(`Erro ao buscar histórico ${period} de ${symbol}:`, err);
         return [];
@@ -179,53 +186,22 @@ export const useStockData = (availableStocks: AvailableStock[], selectedSymbols:
       }
     };
 
-    // Função para atualizar históricos
-    const updateHistoricals = async () => {
-      if (stocks.length === 0) return;
-
-      try {
-        const priorityPeriods: TimePeriod[] = ['1d', '1h'];
-
-        for (const stock of stocks) {
-          for (const period of priorityPeriods) {
-            const history = await fetchStockHistory(stock.symbol, period);
-            if (history.length > 0 && isMounted) {
-              setStocks(prevStocks =>
-                prevStocks.map(s => {
-                  if (s.symbol === stock.symbol) {
-                    const updatedHistory = new Map(s.priceHistory);
-                    updatedHistory.set(period, history);
-                    return { ...s, priceHistory: updatedHistory };
-                  }
-                  return s;
-                })
-              );
-            }
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-        }
-      } catch (err) {
-        console.error('Erro ao atualizar históricos:', err);
-      }
-    };
+    // Nota: Não precisamos mais de updateHistoricals()
+    // Os dados históricos são gerenciados pelo cache do Supabase
+    // e só são atualizados quando o cache expira (conforme TTL definido)
 
     // Inicializar dados
     initializeStocks();
 
-    // Configurar intervalos de atualização
+    // Configurar intervalo de atualização apenas para cotações em tempo real
     quoteInterval = setInterval(() => {
       updateQuotes();
     }, QUOTE_UPDATE_INTERVAL);
-
-    historicalInterval = setInterval(() => {
-      updateHistoricals();
-    }, HISTORICAL_REFRESH_INTERVAL);
 
     // Cleanup
     return () => {
       isMounted = false;
       if (quoteInterval) clearInterval(quoteInterval);
-      if (historicalInterval) clearInterval(historicalInterval);
     };
   }, [availableStocks, selectedSymbols]);
 
