@@ -11,10 +11,6 @@ import { getOrFetchData } from '../services/supabaseCache';
 // Update interval for real-time quotes (30 seconds to respect API limits)
 const QUOTE_UPDATE_INTERVAL = 30000; // 30 seconds
 
-// Historical data refresh - não precisamos mais atualizar com tanta frequência (cache no Supabase)
-// Apenas se o usuário recarregar a página ou se o cache expirar
-const HISTORICAL_REFRESH_INTERVAL = 0; // Desabilitado - usa cache do Supabase
-
 export const useStockData = (availableStocks: AvailableStock[], selectedSymbols: string[]) => {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [loading, setLoading] = useState(true);
