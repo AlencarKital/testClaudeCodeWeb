@@ -1,22 +1,22 @@
-# Guia de Refatoração - Sistema de Dados Históricos
+# Guia de Refatoração - Sistema de Dados com Finnhub
 
 ## 📋 Resumo das Mudanças
 
-Refatoramos o sistema de busca de dados para resolver os problemas de limite de API da Alpha Vantage:
+Migramos da API Alpha Vantage para Finnhub para resolver os problemas de rate limit:
 
-### Antes
-- **Alpha Vantage** → Cotações em tempo real + dados históricos
-- ❌ Atingia limites de API muito rapidamente (5 req/min, 500/dia)
-- ❌ Sem cache persistente (apenas em memória)
-- ❌ Dados históricos buscados repetidamente
+### Antes (Alpha Vantage)
+- **Alpha Vantage** → Cotações em tempo real
+- ❌ Apenas 5 chamadas/minuto
+- ❌ Limite de 500 chamadas/dia
+- ❌ Muito restritivo para uso em produção
 
-### Depois
-- **Alpha Vantage** → Apenas cotações em tempo real (30s refresh)
+### Depois (Finnhub)
+- **Finnhub** → Cotações em tempo real (30s refresh)
 - **Yahoo Finance** → Dados históricos (sem limites rígidos)
 - **Supabase** → Cache persistente dos dados históricos
-- ✅ Muito menos chamadas à Alpha Vantage
-- ✅ Dados históricos servidos do cache na maioria das vezes
+- ✅ 60 chamadas/minuto (12x melhor!)
 - ✅ Sistema escalável e eficiente
+- ✅ API mais moderna e confiável
 
 ## 🏗️ Arquitetura
 
@@ -29,10 +29,10 @@ Refatoramos o sistema de busca de dados para resolver os problemas de limite de 
          │                                      │
          ▼                                      ▼
 ┌────────────────┐                    ┌─────────────────┐
-│ Alpha Vantage  │                    │ Yahoo Finance   │
+│   Finnhub      │                    │ Yahoo Finance   │
 │ (Real-time)    │                    │ (Historical)    │
-└────────────────┘                    └────────┬────────┘
-                                               │
+│ 60 req/min     │                    └────────┬────────┘
+└────────────────┘                             │
                                                ▼
                                       ┌─────────────────┐
                                       │ Supabase Cache  │
@@ -85,8 +85,8 @@ Schema SQL para criar a tabela de cache no Supabase.
 Copie `.env.example` para `.env` e preencha:
 
 ```bash
-# Alpha Vantage (cotações em tempo real)
-VITE_ALPHA_VANTAGE_API_KEY=sua_chave_aqui
+# Finnhub (cotações em tempo real - 60 chamadas/minuto!)
+VITE_FINNHUB_API_KEY=sua_chave_aqui
 
 # Supabase (cache de dados históricos)
 VITE_SUPABASE_URL=https://seu-projeto.supabase.co
@@ -126,9 +126,9 @@ npm run dev
 
 ### Cotações em Tempo Real
 1. Usuário acessa a aplicação
-2. `useStockData` busca cotações via `fetchQuote` (Alpha Vantage)
+2. `useStockData` busca cotações via `fetchQuote` (Finnhub)
 3. Atualiza a cada 30 segundos automaticamente
-4. **Sem cache** (sempre dados frescos)
+4. **Cache de 30 segundos** para evitar chamadas desnecessárias
 
 ### Dados Históricos
 1. Usuário abre um gráfico
@@ -151,9 +151,10 @@ Mantivemos a estratégia "estilo Robinhood":
 2. Demais períodos carregam em background
 3. UI responsiva desde o início
 
-### Redução de Chamadas à API
-- **Antes:** ~40 chamadas por sessão (10 stocks × 4 períodos prioritários)
-- **Depois:** ~10 chamadas na primeira vez, depois ZERO (tudo do cache)
+### Redução de Chamadas à API (Finnhub)
+- **Rate limit muito melhor**: 60 chamadas/minuto vs 5/minuto (Alpha Vantage)
+- **Cotações**: ~10 chamadas para 10 stocks + atualizações a cada 30s
+- **Históricos**: ZERO chamadas (dados do Yahoo Finance com cache)
 
 ## 🧪 Testando
 
@@ -179,10 +180,11 @@ Abra o console do navegador e veja:
 - Alguns símbolos podem não estar disponíveis
 - Yahoo Finance pode estar temporariamente indisponível
 
-### Alpha Vantage ainda atingindo limites
+### Finnhub atingindo limites
+- **Muito difícil** de acontecer com 60 chamadas/minuto!
 - Verifique se você está fazendo muitas atualizações manuais
 - O intervalo de 30s para cotações em tempo real é respeitado
-- Dados históricos **não** usam mais Alpha Vantage
+- Dados históricos **não** usam Finnhub (vêm do Yahoo Finance)
 
 ## 📝 Notas Técnicas
 
@@ -214,11 +216,11 @@ Se as credenciais do Supabase não estiverem configuradas:
 
 ## 📚 Recursos
 
-- [Alpha Vantage API Docs](https://www.alphavantage.co/documentation/)
+- [Finnhub API Docs](https://finnhub.io/docs/api)
 - [Yahoo Finance API](https://query1.finance.yahoo.com/)
 - [Supabase Docs](https://supabase.com/docs)
 - [React Query (alternativa futura)](https://tanstack.com/query/latest)
 
 ---
 
-**Desenvolvido com ❤️ usando React + TypeScript + Vite + Supabase**
+**Desenvolvido com ❤️ usando React + TypeScript + Vite + Finnhub + Supabase**

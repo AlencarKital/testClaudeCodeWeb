@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import type { Stock, AvailableStock, TimePeriod } from '../types/stock';
 import { formatMarketCap } from '../data/stocks';
-// Alpha Vantage: apenas para cotações em tempo real
-import { fetchQuote } from '../services/alphaVantage';
+// Finnhub: cotações em tempo real com rate limit melhor (60/min vs 5/min)
+import { fetchQuote } from '../services/finnhub';
 // Yahoo Finance: dados históricos sem limites rígidos
 import { fetchHistoricalData as fetchYahooHistoricalData } from '../services/yahooFinance';
 // Supabase: cache dos dados históricos
