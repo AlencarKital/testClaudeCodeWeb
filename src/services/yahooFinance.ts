@@ -3,7 +3,10 @@ import type { PricePoint, TimePeriod } from '../types/stock';
 
 // Yahoo Finance API via query1.finance.yahoo.com
 // Este endpoint é público e não requer API key
-const BASE_URL = 'https://query1.finance.yahoo.com/v8/finance/chart';
+// Em desenvolvimento, usa proxy do Vite para evitar CORS
+const BASE_URL = import.meta.env.DEV
+  ? '/api/yahoo/v8/finance/chart'
+  : 'https://query1.finance.yahoo.com/v8/finance/chart';
 
 interface YahooChartResponse {
   chart: {
