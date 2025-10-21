@@ -51,6 +51,48 @@
   color: #f1f5f9;
   margin: 16px 0;
   font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.trend-indicator {
+  font-size: 28px;
+  font-weight: 700;
+  animation: pulse 0.5s ease-in-out;
+  display: inline-block;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.stock-range {
+  font-size: 13px;
+  color: #cbd5e1;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: rgba(100, 116, 139, 0.1);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.range-label {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.range-values {
+  color: #e2e8f0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .stock-change {
