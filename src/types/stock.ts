@@ -3,6 +3,8 @@ export interface PricePoint {
   price: number;
 }
 
+export type TimePeriod = '15min' | '1h' | '1d' | '5d' | '1m' | '3m' | '6m' | '1y';
+
 export interface Stock {
   symbol: string;
   name: string;
@@ -11,7 +13,7 @@ export interface Stock {
   changePercent: number;
   volume: number;
   marketCap: string;
-  priceHistory: PricePoint[];
+  priceHistory: Map<TimePeriod, PricePoint[]>;
 }
 
 export interface AvailableStock {
