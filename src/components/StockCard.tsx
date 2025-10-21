@@ -3,14 +3,15 @@ import './StockCard.css';
 
 interface StockCardProps {
   stock: Stock;
+  onClick?: () => void;
 }
 
-const StockCard = ({ stock }: StockCardProps) => {
+const StockCard = ({ stock, onClick }: StockCardProps) => {
   const isPositive = stock.change >= 0;
   const arrow = isPositive ? '▲' : '▼';
 
   return (
-    <div className="stock-card">
+    <div className="stock-card" onClick={onClick}>
       <div className="stock-header">
         <div className="stock-symbol">{stock.symbol}</div>
         <div className="stock-name">{stock.name}</div>

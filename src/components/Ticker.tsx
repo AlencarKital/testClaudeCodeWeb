@@ -4,9 +4,10 @@ import './Ticker.css';
 
 interface TickerProps {
   stocks: Stock[];
+  onStockClick?: (stock: Stock) => void;
 }
 
-const Ticker = ({ stocks }: TickerProps) => {
+const Ticker = ({ stocks, onStockClick }: TickerProps) => {
   return (
     <div className="ticker-container">
       <div className="ticker-header">
@@ -24,7 +25,11 @@ const Ticker = ({ stocks }: TickerProps) => {
       ) : (
         <div className="ticker-grid">
           {stocks.map(stock => (
-            <StockCard key={stock.symbol} stock={stock} />
+            <StockCard
+              key={stock.symbol}
+              stock={stock}
+              onClick={() => onStockClick?.(stock)}
+            />
           ))}
         </div>
       )}
