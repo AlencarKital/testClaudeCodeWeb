@@ -4,9 +4,18 @@ import type { PricePoint, TimePeriod } from '../types/stock';
 // Yahoo Finance API via query1.finance.yahoo.com
 // Este endpoint é público e não requer API key
 // Em desenvolvimento, usa proxy do Vite para evitar CORS
+// Em produção, usa proxy CORS público
+const YAHOO_API_URL = 'https://query1.finance.yahoo.com/v8/finance/chart';
+
 const BASE_URL = import.meta.env.DEV
   ? '/api/yahoo/v8/finance/chart'
-  : 'https://query1.finance.yahoo.com/v8/finance/chart';
+  : YAHOO_API_URL;
+
+// Proxies CORS para produção (fallback)
+const CORS_PROXIES = [
+  'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url=',
+];
 
 interface YahooChartResponse {
   chart: {
@@ -44,6 +53,57 @@ const PERIOD_CONFIG: Record<TimePeriod, { range: string; interval: string }> = {
 };
 
 /**
+ * Tenta fazer requisição com fallback para proxies CORS
+ */
+async function fetchWithCorsProxy(
+  url: string,
+  params: Record<string, any>,
+  timeout: number
+): Promise<YahooChartResponse> {
+  const errors: string[] = [];
+
+  // Em desenvolvimento, usar apenas a URL direta (proxy do Vite)
+  if (import.meta.env.DEV) {
+    const response = await axios.get<YahooChartResponse>(url, {
+      params,
+      timeout,
+    });
+    return response.data;
+  }
+
+  // Em produção, tentar com proxies CORS
+  const queryString = new URLSearchParams(params).toString();
+  const fullUrl = `${url}?${queryString}`;
+
+  // Tentar com cada proxy CORS
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const proxyUrl = proxy + encodeURIComponent(fullUrl);
+      console.log(`[Yahoo Finance] Tentando com proxy: ${proxy}`);
+
+      const response = await axios.get<YahooChartResponse>(proxyUrl, {
+        timeout,
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      console.log(`[Yahoo Finance] ✓ Sucesso com proxy: ${proxy}`);
+      return response.data;
+    } catch (error) {
+      const errorMsg = axios.isAxiosError(error)
+        ? `${error.message} (${error.response?.status || 'network error'})`
+        : String(error);
+      errors.push(`${proxy}: ${errorMsg}`);
+      console.warn(`[Yahoo Finance] Falha com proxy ${proxy}:`, errorMsg);
+    }
+  }
+
+  // Se todos os proxies falharam, lançar erro com detalhes
+  throw new Error(`Todos os proxies CORS falharam:\n${errors.join('\n')}`);
+}
+
+/**
  * Busca dados históricos do Yahoo Finance
  * @param symbol - Símbolo da ação (ex: AAPL, GOOGL)
  * @param period - Período desejado
@@ -56,22 +116,20 @@ export async function fetchHistoricalData(
   try {
     const config = PERIOD_CONFIG[period];
     const url = `${BASE_URL}/${symbol}`;
+    const params = {
+      range: config.range,
+      interval: config.interval,
+      includePrePost: false,
+    };
 
     console.log(`[Yahoo Finance] Buscando dados históricos de ${symbol} (período: ${period})...`);
 
-    const response = await axios.get<YahooChartResponse>(url, {
-      params: {
-        range: config.range,
-        interval: config.interval,
-        includePrePost: false,
-      },
-      timeout: 10000, // 10 segundos timeout
-    });
+    const data = await fetchWithCorsProxy(url, params, 10000);
 
-    const result = response.data.chart.result?.[0];
+    const result = data.chart.result?.[0];
 
-    if (!result || response.data.chart.error) {
-      console.error(`[Yahoo Finance] Erro na API para ${symbol} (${period}):`, response.data.chart.error);
+    if (!result || data.chart.error) {
+      console.error(`[Yahoo Finance] Erro na API para ${symbol} (${period}):`, data.chart.error);
       return [];
     }
 
@@ -146,11 +204,11 @@ export async function fetchMultipleHistoricalData(
  */
 export async function checkYahooFinanceHealth(): Promise<boolean> {
   try {
-    const response = await axios.get(`${BASE_URL}/AAPL`, {
-      params: { range: '1d', interval: '1d' },
-      timeout: 5000,
-    });
-    return response.status === 200 && !response.data.chart.error;
+    const url = `${BASE_URL}/AAPL`;
+    const params = { range: '1d', interval: '1d' };
+
+    const data = await fetchWithCorsProxy(url, params, 5000);
+    return !data.chart.error;
   } catch (error) {
     console.error('Yahoo Finance health check failed:', error);
     return false;
