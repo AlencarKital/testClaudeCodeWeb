@@ -8,7 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import type { Stock } from '../types/stock';
+import type { Stock, TimePeriod } from '../types/stock';
 import './StockChartModal.css';
 
 interface StockChartModalProps {
@@ -16,37 +16,63 @@ interface StockChartModalProps {
   onClose: () => void;
 }
 
-type TimePeriod = '15min' | '1h' | '1d' | '5d' | '1m' | '3m' | '6m' | '1y';
-
-const TIME_PERIODS: { value: TimePeriod; label: string; minutes: number }[] = [
-  { value: '15min', label: '15min', minutes: 15 },
-  { value: '1h', label: '1h', minutes: 60 },
-  { value: '1d', label: '1 Dia', minutes: 1440 },
-  { value: '5d', label: '5 Dias', minutes: 7200 },
-  { value: '1m', label: '1 Mês', minutes: 43200 },
-  { value: '3m', label: '3 Meses', minutes: 129600 },
-  { value: '6m', label: '6 Meses', minutes: 259200 },
-  { value: '1y', label: '1 Ano', minutes: 525600 },
+const TIME_PERIODS: { value: TimePeriod; label: string }[] = [
+  { value: '15min', label: '15min' },
+  { value: '1h', label: '1h' },
+  { value: '1d', label: '1 Dia' },
+  { value: '5d', label: '5 Dias' },
+  { value: '1m', label: '1 Mês' },
+  { value: '3m', label: '3 Meses' },
+  { value: '6m', label: '6 Meses' },
+  { value: '1y', label: '1 Ano' },
 ];
+
+// Format time based on period (similar to Robinhood)
+const formatTimeForPeriod = (timestamp: number, period: TimePeriod): string => {
+  const date = new Date(timestamp);
+
+  switch (period) {
+    case '15min':
+    case '1h':
+    case '1d':
+      // Show time for intraday
+      return date.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    case '5d':
+      // Show day and time
+      return date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+      });
+    case '1m':
+    case '3m':
+    case '6m':
+    case '1y':
+      // Show date for longer periods
+      return date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'short',
+      });
+    default:
+      return date.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+  }
+};
 
 const StockChartModal = ({ stock, onClose }: StockChartModalProps) => {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('1d');
 
-  // Filter price history based on selected period
+  // Get price history for selected period
   const chartData = useMemo(() => {
-    const period = TIME_PERIODS.find(p => p.value === selectedPeriod);
-    if (!period) return [];
+    const periodHistory = stock.priceHistory.get(selectedPeriod);
+    if (!periodHistory || periodHistory.length === 0) return [];
 
-    const cutoffTime = Date.now() - period.minutes * 60 * 1000;
-    const filteredData = stock.priceHistory.filter(
-      point => point.timestamp >= cutoffTime
-    );
-
-    return filteredData.map(point => ({
-      time: new Date(point.timestamp).toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
+    return periodHistory.map(point => ({
+      time: formatTimeForPeriod(point.timestamp, selectedPeriod),
       timestamp: point.timestamp,
       price: point.price,
     }));
