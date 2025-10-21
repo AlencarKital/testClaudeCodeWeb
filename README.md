@@ -188,9 +188,20 @@ Este projeto é uma excelente oportunidade para aprender:
 
 ## 🔧 Troubleshooting
 
+**Erro: "API Key inválida ou expirada" ou "Access denied":**
+- Sua API key do Alpha Vantage está inválida ou expirou
+- **Solução**: Obtenha uma nova API key gratuita em https://www.alphavantage.co/support/#api-key
+- Atualize o arquivo `.env` com a nova chave
+- Reinicie o servidor de desenvolvimento (`npm run dev`)
+
+**Erro: "Cannot read properties of undefined (reading '05. price')":**
+- Este erro indica que a API não está retornando dados válidos
+- Geralmente causado por API key inválida
+- Verifique se a API key no arquivo `.env` está correta
+
 **Erro ao carregar dados:**
 - Verifique se a API key está configurada corretamente no arquivo `.env`
-- Confirme que não excedeu o limite de chamadas da API
+- Confirme que não excedeu o limite de chamadas da API (5/minuto, 500/dia)
 - Verifique sua conexão com a internet
 
 **Dados não atualizam:**

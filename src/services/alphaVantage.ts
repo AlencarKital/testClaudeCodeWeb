@@ -129,7 +129,14 @@ export async function fetchQuote(symbol: string): Promise<{
         throw new Error(`Erro ao buscar cotação: ${response.statusText}`);
       }
 
-      const json = await response.json();
+      const text = await response.text();
+
+      // Verificar se a API retornou "Access denied"
+      if (text.trim().toLowerCase() === 'access denied') {
+        throw new Error('API Key inválida ou expirada. Obtenha uma nova em https://www.alphavantage.co/support/#api-key');
+      }
+
+      const json = JSON.parse(text);
 
       // Verificar se há erro da API
       if (json['Error Message']) {
@@ -146,6 +153,11 @@ export async function fetchQuote(symbol: string): Promise<{
   );
 
   const quote = data['Global Quote'];
+
+  // Verificar se a resposta contém os dados esperados
+  if (!quote || !quote['05. price']) {
+    throw new Error('Resposta inválida da API. Verifique se a API key está configurada corretamente.');
+  }
 
   return {
     price: parseFloat(quote['05. price']),
