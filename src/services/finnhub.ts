@@ -88,6 +88,8 @@ export async function fetchQuote(symbol: string): Promise<{
   change: number;
   changePercent: number;
   previousClose: number;
+  dayHigh: number;
+  dayLow: number;
 }> {
   const cacheKey = `quote_${symbol}`;
 
@@ -123,7 +125,9 @@ export async function fetchQuote(symbol: string): Promise<{
     price: data.c,
     change: data.d,
     changePercent: data.dp,
-    previousClose: data.pc
+    previousClose: data.pc,
+    dayHigh: data.h,
+    dayLow: data.l
   };
 }
 

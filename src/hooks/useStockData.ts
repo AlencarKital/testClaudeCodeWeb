@@ -36,6 +36,8 @@ export const useStockData = (availableStocks: AvailableStock[], selectedSymbols:
           changePercent: quote.changePercent,
           volume: Math.floor(Math.random() * 100000000), // API gratuita não fornece volume em tempo real
           marketCap: formatMarketCap(quote.price),
+          dayHigh: quote.dayHigh,
+          dayLow: quote.dayLow,
         };
       } catch (err) {
         console.error(`[useStockData] ❌ Erro ao buscar cotação de ${symbol}:`, err);
@@ -118,6 +120,8 @@ export const useStockData = (availableStocks: AvailableStock[], selectedSymbols:
           changePercent: quoteData.changePercent!,
           volume: quoteData.volume!,
           marketCap: quoteData.marketCap!,
+          dayHigh: quoteData.dayHigh!,
+          dayLow: quoteData.dayLow!,
           priceHistory,
         };
       } catch (err) {
@@ -168,18 +172,33 @@ export const useStockData = (availableStocks: AvailableStock[], selectedSymbols:
           const quoteData = await fetchStockQuote(stock.symbol, stockInfo);
           if (quoteData && isMounted) {
             setStocks(prevStocks =>
-              prevStocks.map(s =>
-                s.symbol === stock.symbol
-                  ? {
-                      ...s,
-                      price: quoteData.price!,
-                      change: quoteData.change!,
-                      changePercent: quoteData.changePercent!,
-                      marketCap: quoteData.marketCap!,
-                      volume: s.volume + Math.floor(Math.random() * 1000000),
-                    }
-                  : s
-              )
+              prevStocks.map(s => {
+                if (s.symbol === stock.symbol) {
+                  const previousPrice = s.price;
+                  const newPrice = quoteData.price!;
+                  let priceDirection: 'up' | 'down' | 'neutral' = 'neutral';
+
+                  if (newPrice > previousPrice) {
+                    priceDirection = 'up';
+                  } else if (newPrice < previousPrice) {
+                    priceDirection = 'down';
+                  }
+
+                  return {
+                    ...s,
+                    previousPrice,
+                    price: newPrice,
+                    change: quoteData.change!,
+                    changePercent: quoteData.changePercent!,
+                    marketCap: quoteData.marketCap!,
+                    dayHigh: quoteData.dayHigh!,
+                    dayLow: quoteData.dayLow!,
+                    volume: s.volume + Math.floor(Math.random() * 1000000),
+                    priceDirection,
+                  };
+                }
+                return s;
+              })
             );
           }
 
