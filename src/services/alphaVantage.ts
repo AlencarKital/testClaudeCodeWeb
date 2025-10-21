@@ -123,30 +123,41 @@ export async function fetchQuote(symbol: string): Promise<{
     cacheKey,
     async () => {
       const url = `${BASE_URL}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${API_KEY}`;
+      console.log(`[Alpha Vantage] Buscando cotação de ${symbol}...`);
       const response = await fetch(url);
 
       if (!response.ok) {
-        throw new Error(`Erro ao buscar cotação: ${response.statusText}`);
+        throw new Error(`[Alpha Vantage] Erro HTTP ${response.status}: ${response.statusText}`);
       }
 
       const text = await response.text();
 
       // Verificar se a API retornou "Access denied"
       if (text.trim().toLowerCase() === 'access denied') {
-        throw new Error('API Key inválida ou expirada. Obtenha uma nova em https://www.alphavantage.co/support/#api-key');
+        console.error(`[Alpha Vantage] API Key inválida - Resposta: "${text}"`);
+        throw new Error('[Alpha Vantage] API Key inválida ou expirada. Obtenha uma nova em https://www.alphavantage.co/support/#api-key');
       }
 
-      const json = JSON.parse(text);
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch (parseError) {
+        console.error(`[Alpha Vantage] Erro ao fazer parse da resposta:`, text.substring(0, 200));
+        throw new Error(`[Alpha Vantage] Resposta inválida da API (não é JSON válido)`);
+      }
 
       // Verificar se há erro da API
       if (json['Error Message']) {
-        throw new Error(`API Error: ${json['Error Message']}`);
+        console.error(`[Alpha Vantage] Erro da API:`, json['Error Message']);
+        throw new Error(`[Alpha Vantage] ${json['Error Message']}`);
       }
 
       if (json['Note']) {
-        throw new Error('Rate limit da API atingido. Aguarde alguns minutos.');
+        console.warn(`[Alpha Vantage] Rate limit atingido:`, json['Note']);
+        throw new Error('[Alpha Vantage] Rate limit atingido (5 chamadas/minuto). Aguarde alguns minutos.');
       }
 
+      console.log(`[Alpha Vantage] Resposta recebida para ${symbol}:`, Object.keys(json));
       return json;
     },
     30000 // Cache de 30 segundos para cotações
@@ -156,8 +167,11 @@ export async function fetchQuote(symbol: string): Promise<{
 
   // Verificar se a resposta contém os dados esperados
   if (!quote || !quote['05. price']) {
-    throw new Error('Resposta inválida da API. Verifique se a API key está configurada corretamente.');
+    console.error(`[Alpha Vantage] Resposta inválida - estrutura recebida:`, JSON.stringify(data, null, 2));
+    throw new Error(`[Alpha Vantage] Resposta inválida para ${symbol}. A API retornou: ${JSON.stringify(Object.keys(data))}`);
   }
+
+  console.log(`[Alpha Vantage] Cotação de ${symbol} obtida com sucesso: $${quote['05. price']}`);
 
   return {
     price: parseFloat(quote['05. price']),

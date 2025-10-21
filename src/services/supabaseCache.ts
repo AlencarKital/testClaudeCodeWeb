@@ -36,12 +36,13 @@ let supabase: SupabaseClient | null = null;
 function getSupabaseClient(): SupabaseClient | null {
   // Se não tiver credenciais, retorna null (modo offline)
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.warn('Supabase not configured. Cache disabled.');
+    console.warn('[Supabase Cache] Supabase não configurado. Cache desabilitado.');
     return null;
   }
 
   if (!supabase) {
     supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('[Supabase Cache] Cliente Supabase inicializado');
   }
 
   return supabase;
@@ -69,20 +70,23 @@ export async function getCachedData(
       .single();
 
     if (error || !data) {
+      console.log(`[Supabase Cache] Cache MISS para ${symbol} (${period})`);
       return null;
     }
 
     // Verificar se o cache expirou
     const expiresAt = new Date(data.expires_at);
     if (expiresAt < new Date()) {
+      console.log(`[Supabase Cache] Cache EXPIRADO para ${symbol} (${period})`);
       // Cache expirado, deletar
       await deleteCachedData(symbol, period);
       return null;
     }
 
+    console.log(`[Supabase Cache] Cache HIT para ${symbol} (${period}) - ${(data.data as PricePoint[]).length} pontos`);
     return data.data as PricePoint[];
   } catch (error) {
-    console.error(`Error fetching cache for ${symbol} (${period}):`, error);
+    console.error(`[Supabase Cache] Erro ao buscar cache de ${symbol} (${period}):`, error);
     return null;
   }
 }
@@ -121,10 +125,12 @@ export async function setCachedData(
       });
 
     if (error) {
-      console.error(`Error caching data for ${symbol} (${period}):`, error);
+      console.error(`[Supabase Cache] Erro ao salvar cache de ${symbol} (${period}):`, error);
+    } else {
+      console.log(`[Supabase Cache] Dados salvos para ${symbol} (${period}) - ${data.length} pontos, expira em ${Math.round(ttl / 60000)} min`);
     }
   } catch (error) {
-    console.error(`Error setting cache for ${symbol} (${period}):`, error);
+    console.error(`[Supabase Cache] Erro ao configurar cache de ${symbol} (${period}):`, error);
   }
 }
 
@@ -221,11 +227,10 @@ export async function getOrFetchData(
   // Tentar buscar do cache primeiro
   const cachedData = await getCachedData(symbol, period);
   if (cachedData && cachedData.length > 0) {
-    console.log(`Cache HIT for ${symbol} (${period})`);
     return cachedData;
   }
 
-  console.log(`Cache MISS for ${symbol} (${period}), fetching...`);
+  console.log(`[Supabase Cache] Buscando dados frescos para ${symbol} (${period})...`);
 
   // Se não tiver em cache, buscar dos dados
   const freshData = await fetchFn();
@@ -233,6 +238,8 @@ export async function getOrFetchData(
   // Salvar no cache para próxima vez
   if (freshData.length > 0) {
     await setCachedData(symbol, period, freshData);
+  } else {
+    console.warn(`[Supabase Cache] Nenhum dado retornado para ${symbol} (${period})`);
   }
 
   return freshData;

@@ -54,6 +54,8 @@ export async function fetchHistoricalData(
     const config = PERIOD_CONFIG[period];
     const url = `${BASE_URL}/${symbol}`;
 
+    console.log(`[Yahoo Finance] Buscando dados históricos de ${symbol} (período: ${period})...`);
+
     const response = await axios.get<YahooChartResponse>(url, {
       params: {
         range: config.range,
@@ -66,7 +68,7 @@ export async function fetchHistoricalData(
     const result = response.data.chart.result?.[0];
 
     if (!result || response.data.chart.error) {
-      console.error(`Yahoo Finance API error for ${symbol}:`, response.data.chart.error);
+      console.error(`[Yahoo Finance] Erro na API para ${symbol} (${period}):`, response.data.chart.error);
       return [];
     }
 
@@ -74,7 +76,7 @@ export async function fetchHistoricalData(
     const prices = result.indicators.quote[0].close;
 
     if (!timestamps || !prices) {
-      console.warn(`No data available for ${symbol} (${period})`);
+      console.warn(`[Yahoo Finance] Nenhum dado disponível para ${symbol} (${period})`);
       return [];
     }
 
@@ -90,16 +92,18 @@ export async function fetchHistoricalData(
       }
     }
 
+    console.log(`[Yahoo Finance] ${pricePoints.length} pontos de dados obtidos para ${symbol} (${period})`);
     return pricePoints;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      console.error(`Yahoo Finance fetch error for ${symbol}:`, {
+      console.error(`[Yahoo Finance] Erro ao buscar ${symbol} (${period}):`, {
         message: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,
+        url: `${BASE_URL}/${symbol}`,
       });
     } else {
-      console.error(`Unexpected error fetching ${symbol}:`, error);
+      console.error(`[Yahoo Finance] Erro inesperado ao buscar ${symbol} (${period}):`, error);
     }
     return [];
   }
